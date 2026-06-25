@@ -34,4 +34,41 @@ def engineer_features(raw : dict , feature_columns : list , card_stats : dict) -
     else:
         row['amt_zscore_card'] = 0.0
 
-    
+    dt = float(raw.get('TransactionDT', 0))
+    hour = (dt / 3600) % 24
+    row['hour_sin'] = np.sin(2 * np.pi * hour / 24)
+    row['hour_cos'] = np.cos(2 * np.pi * hour / 24)
+
+    row['ProductCD']     = raw.get('ProductCD', 'unknown')
+    row['P_emaildomain'] = raw.get('P_emaildomain', 'unknown')
+    row['M1'] = raw.get('M1', 'missing')
+    row['M2'] = raw.get('M2', 'missing')
+    row['M3'] = raw.get('M3', 'missing')
+    row['M4'] = raw.get('M4', 'missing')
+    row['M6'] = raw.get('M6', 'missing')
+
+    already_set = set(row.keys())
+    for col in feature_columns:
+        if col not in already_set:
+            row[col] = raw.get(col, -999.0)
+ 
+    return pd.DataFrame([row])
+ 
+def apply_encoders(df : pd.DataFrame , target_encoder , label_encoders , te_cols : list) -> pd.DataFrame : 
+    df = df.copy()
+    df[te_cols] = target_encoder.transform(df[te_cols])
+
+    for col, le in label_encoders.items():
+        val = str(df[col].iloc[0])
+        if val in le.classes_:
+            df[col] = le.transform([val])[0]
+        else:
+            df[col] = -1  # unseen category sentinel
+ 
+    return df
+
+def align_columns(df: pd.DataFrame, expected_columns: list) -> pd.DataFrame:
+    for col in expected_columns:
+        if col not in df.columns:
+            df[col] = -999.0
+    return df[expected_columns]
