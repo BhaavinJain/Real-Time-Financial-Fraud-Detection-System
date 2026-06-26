@@ -32,9 +32,9 @@ import os
 # st.secrets always exists as an attribute even with no secrets.toml file --
 # hasattr() can't detect that, so we must try/except the actual access.
 try:
-    API_URL = st.secrets.get("API_URL", "http://localhost:8000")
+    API_URL = st.secrets.get("API_URL", "https://real-time-financial-fraud-detection-2ycq.onrender.com/")
 except Exception:
-    API_URL = "http://localhost:8000"
+    API_URL = "https://real-time-financial-fraud-detection-2ycq.onrender.com/"
 
 API_URL = os.environ.get("API_URL", API_URL)
 
