@@ -1,17 +1,34 @@
+"""
+PATCH for api/main.py — replace the existing imports + lifespan function
+with this version. Everything else in main.py (the /health, /metrics,
+/predict route handlers) stays exactly the same — only the path resolution
+at startup changes.
+"""
+
 import time
 import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from pathlib import Path
 from contextlib import asynccontextmanager
- 
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from tensorflow import keras
- 
+
 from schemas import TransactionInput, PredictionResponse, HealthResponse, MetricsResponse
 from preprocessing import engineer_features, apply_encoders, align_columns
 
+# ── Path resolution -- ABSOLUTE, based on this file's own location ─────────
+# __file__ = .../api/main.py  ->  parent = api/  ->  parent.parent = repo root
+# This works identically on your local machine, Render, Docker, anywhere --
+# it never depends on what directory the process happened to be launched from.
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODELS_DIR = BASE_DIR / "models"
+DATA_DIR = BASE_DIR / "data" / "processed"
+
+# ── Global state -- populated once at startup, never reloaded per-request ──
 ml_models = {}
 app_state = {
     'start_time': time.time(),
@@ -22,23 +39,26 @@ app_state = {
     'last_prediction_time': None,
 }
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── STARTUP ──
-    print("Loading models...")
-    ml_models['xgb']             = joblib.load('../models/xgboost_best.pkl')
-    ml_models['autoencoder']     = keras.models.load_model('../models/autoencoder.keras')
-    ml_models['scaler']          = joblib.load('../models/Standard_scaler.pkl')
-    ml_models['target_encoder']  = joblib.load('../models/target_encoder.pkl')
-    ml_models['label_encoders']  = joblib.load('../models/label_encoders.pkl')
-    ml_models['shap_explainer']  = joblib.load('../models/shap_explainer.pkl')
-    ml_models['ensemble_config'] = joblib.load('../models/ensemble_config.pkl')
-    ml_models['card_stats']      = joblib.load('../models/card_stats.pkl')
- 
-    sample_train = pd.read_parquet('../data/processed/X_train.parquet')
+    print(f"BASE_DIR resolved to: {BASE_DIR}")
+    print(f"Loading models from: {MODELS_DIR}")
+
+    ml_models['xgb']             = joblib.load(MODELS_DIR / 'xgboost_best.pkl')
+    ml_models['autoencoder']     = keras.models.load_model(MODELS_DIR / 'autoencoder.keras')
+    ml_models['scaler']          = joblib.load(MODELS_DIR / 'Standard_scaler.pkl')
+    ml_models['target_encoder']  = joblib.load(MODELS_DIR / 'target_encoder.pkl')
+    ml_models['label_encoders']  = joblib.load(MODELS_DIR / 'label_encoders.pkl')
+    ml_models['shap_explainer']  = joblib.load(MODELS_DIR / 'shap_explainer.pkl')
+    ml_models['ensemble_config'] = joblib.load(MODELS_DIR / 'ensemble_config.pkl')
+    ml_models['card_stats']      = joblib.load(MODELS_DIR / 'card_stats.pkl')
+
+    sample_train = pd.read_parquet(DATA_DIR / 'X_train.parquet')
     ml_models['feature_columns'] = sample_train.columns.tolist()
     ml_models['te_cols'] = ['P_emaildomain', 'ProductCD', 'card_id']
- 
+
     print(f"Models loaded. {len(ml_models['feature_columns'])} features expected.")
     print(f"card_stats loaded for {len(ml_models['card_stats']):,} known cards.")
     yield
