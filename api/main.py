@@ -55,8 +55,7 @@ async def lifespan(app: FastAPI):
     ml_models['ensemble_config'] = joblib.load(MODELS_DIR / 'ensemble_config.pkl')
     ml_models['card_stats']      = joblib.load(MODELS_DIR / 'card_stats.pkl')
 
-    sample_train = pd.read_parquet(DATA_DIR / 'X_train.parquet')
-    ml_models['feature_columns'] = sample_train.columns.tolist()
+    ml_models['feature_columns'] = joblib.load(MODELS_DIR / 'feature_columns.pkl')
     ml_models['te_cols'] = ['P_emaildomain', 'ProductCD', 'card_id']
 
     print(f"Models loaded. {len(ml_models['feature_columns'])} features expected.")
