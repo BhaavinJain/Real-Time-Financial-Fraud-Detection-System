@@ -375,7 +375,7 @@ with tab_batch:
         help="Expects columns matching the API's TransactionInput schema"
     )
 
-    sample_path = Path("sample_transactions.csv")
+    sample_path = Path(__file__).parent / "sample_transactions.csv"
     use_sample = st.button("Or load 25 sample transactions from test set", type="secondary")
 
     batch_df = None
