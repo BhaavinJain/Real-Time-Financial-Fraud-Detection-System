@@ -4,7 +4,6 @@ __pycache__/
 *.pyc
 .env
 mlruns/
-*.csv
 *.zip
 venv/
 !dashboard/sample_transactions.csv
